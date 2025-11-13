@@ -1,16 +1,13 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { useUser } from "@/contexts/UserContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Brain, Send, User, Loader2 } from "lucide-react";
+import { Brain, Send, User, Loader2, MessageSquare } from "lucide-react";
 import type { TriageResponse } from "@shared/schema";
 import { cn } from "@/lib/utils";
-import { Bot, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 interface Message {
@@ -32,21 +29,34 @@ export default function AIChat({ messages: initialMessages, onSendMessage }: AIC
   const [messages, setMessages] = useState<Message[]>(initialMessages || []);
   const [input, setInput] = useState("");
   const { user } = useUser();
-  const isLoading = false; // Placeholder for actual loading state
-  const messagesEndRef = null; // Placeholder for actual ref
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const triageMutation = useMutation({
     mutationFn: async (symptoms: string) => {
-      return await apiRequest<TriageResponse>("/api/triage", {
+      const response = await fetch("/api/triage", {
         method: "POST",
         body: JSON.stringify({ symptoms }),
         headers: { "Content-Type": "application/json" },
       });
+      
+      if (!response.ok) {
+        throw new Error("Failed to get triage response");
+      }
+      
+      return response.json() as Promise<TriageResponse>;
     },
     onSuccess: (data, symptoms) => {
       const firstAidText = data.first_aid?.join("\n• ") || "No specific first aid recommended";
       const flagsText = data.medical_flags?.length > 0
-        ? `\n\n⚠️ Medical Flags: ${data.medical_flags.join(", ")}`
+        ? `\n\nMedical Flags: ${data.medical_flags.join(", ")}`
         : "";
 
       const aiResponse: Message = {
@@ -94,64 +104,83 @@ export default function AIChat({ messages: initialMessages, onSendMessage }: AIC
     handleSend();
   };
 
-
   return (
-    <Card className="h-[600px] flex flex-col bg-gray-900/50 border-gray-800 backdrop-blur-sm shadow-xl">
-      <CardHeader className="border-b border-gray-800">
-        <CardTitle className="flex items-center gap-2 text-white">
+    <Card className="h-full flex flex-col" data-testid="card-ai-chat">
+      <CardHeader className="flex-shrink-0 border-b space-y-0 pb-4">
+        <CardTitle className="flex items-center gap-2 text-base">
           <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-            <MessageSquare className="h-5 w-5 text-white" />
+            <MessageSquare className="h-4 w-4 text-white" />
           </div>
-          Chat with AI Doctor
+          AI Medical Assistant
         </CardTitle>
+        <p className="text-xs text-muted-foreground mt-1">
+          Powered by Google Gemini AI
+        </p>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col p-0">
-        <ScrollArea className="flex-1 p-4">
-          <div className="space-y-4">
+      <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+        <ScrollArea className="flex-1 px-4 py-3">
+          <div className="space-y-3">
+            {messages.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center mb-4 border border-purple-500/20">
+                  <Brain className="h-8 w-8 text-purple-500" />
+                </div>
+                <h3 className="font-semibold text-foreground mb-1">
+                  Start Your Health Consultation
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-xs">
+                  Describe your symptoms and I'll provide instant medical triage and first aid guidance
+                </p>
+              </div>
+            )}
             {messages.map((msg) => (
               <div
                 key={msg.id}
                 className={cn(
-                  "flex gap-3",
+                  "flex gap-2.5",
                   msg.role === "user" ? "justify-end" : "justify-start"
                 )}
               >
                 {msg.role === "ai" && (
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center flex-shrink-0 border border-purple-500/30">
-                    <Brain className="h-5 w-5 text-purple-400" />
+                  <div className="mt-1 h-7 w-7 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center flex-shrink-0 border border-purple-500/20">
+                    <Brain className="h-4 w-4 text-purple-500" />
                   </div>
                 )}
                 <div
                   className={cn(
-                    "rounded-lg px-4 py-2 max-w-[80%]",
+                    "rounded-lg px-3.5 py-2.5 max-w-[85%]",
                     msg.role === "user"
                       ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white"
-                      : "bg-gray-800 text-gray-100 border border-gray-700"
+                      : "bg-muted border text-foreground"
                   )}
                 >
-                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                   {msg.urgencyScore !== undefined && (
-                    <div className="mt-2">
-                      <Badge variant="outline" className="text-xs">
+                    <div className="mt-2 pt-2 border-t border-white/20">
+                      <Badge 
+                        variant={msg.urgencyScore >= 7 ? "destructive" : "secondary"} 
+                        className="text-xs"
+                      >
                         Urgency: {msg.urgencyScore}/10
                       </Badge>
                     </div>
                   )}
                 </div>
                 {msg.role === "user" && (
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
-                    <User className="h-5 w-5 text-white" />
+                  <div className="mt-1 h-7 w-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                    <User className="h-4 w-4 text-white" />
                   </div>
                 )}
               </div>
             ))}
-            {isLoading && (
-              <div className="flex gap-3">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center flex-shrink-0 border border-purple-500/30">
-                  <Brain className="h-5 w-5 text-purple-400" />
+            {triageMutation.isPending && (
+              <div className="flex gap-2.5">
+                <div className="mt-1 h-7 w-7 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center flex-shrink-0 border border-purple-500/20">
+                  <Brain className="h-4 w-4 text-purple-500" />
                 </div>
-                <div className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
+                <div className="bg-muted border rounded-lg px-3.5 py-2.5 flex items-center gap-2">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-purple-500" />
+                  <span className="text-sm text-muted-foreground">Analyzing...</span>
                 </div>
               </div>
             )}
@@ -159,20 +188,21 @@ export default function AIChat({ messages: initialMessages, onSendMessage }: AIC
           </div>
         </ScrollArea>
 
-        <div className="p-4 border-t border-gray-800 bg-gray-900/50">
+        <div className="flex-shrink-0 p-4 border-t bg-muted/30">
           <form onSubmit={handleSubmit} className="flex gap-2">
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Describe your symptoms..."
               disabled={triageMutation.isPending}
-              className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-purple-500"
+              className="flex-1"
+              data-testid="input-symptoms"
             />
             <Button
-              onClick={handleSend}
+              type="submit"
               size="icon"
-              className="h-[80px] bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500"
-              disabled={triageMutation.isPending}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 flex-shrink-0"
+              disabled={triageMutation.isPending || !input.trim()}
               data-testid="button-send-message"
             >
               {triageMutation.isPending ? (

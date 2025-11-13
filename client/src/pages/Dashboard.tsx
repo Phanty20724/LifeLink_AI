@@ -4,11 +4,11 @@ import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@/contexts/UserContext";
 import Navbar from "@/components/Navbar";
-import HealthMetricCard from "@/components/HealthMetricCard";
 import AIChat from "@/components/AIChat";
 import { Heart, Activity, Thermometer, Droplets, TrendingUp, Calendar } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import type { HealthLog } from "@shared/schema";
 
@@ -36,181 +36,231 @@ export default function Dashboard() {
 
   const latestLog = healthLogs?.[0];
 
+  const vitals = [
+    {
+      label: "Heart Rate",
+      value: latestLog?.heartRate?.toString() || "--",
+      unit: "bpm",
+      icon: Heart,
+      color: "from-red-500 to-pink-500",
+      bgColor: "bg-red-500/10",
+      borderColor: "border-red-500/30",
+    },
+    {
+      label: "Blood Pressure",
+      value:
+        latestLog?.bloodPressureSystolic && latestLog?.bloodPressureDiastolic
+          ? `${latestLog.bloodPressureSystolic}/${latestLog.bloodPressureDiastolic}`
+          : "--",
+      unit: "mmHg",
+      icon: Activity,
+      color: "from-blue-500 to-cyan-500",
+      bgColor: "bg-blue-500/10",
+      borderColor: "border-blue-500/30",
+    },
+    {
+      label: "Temperature",
+      value: latestLog?.temperature?.toString() || "--",
+      unit: "°F",
+      icon: Thermometer,
+      color: "from-orange-500 to-yellow-500",
+      bgColor: "bg-orange-500/10",
+      borderColor: "border-orange-500/30",
+    },
+    {
+      label: "Oxygen",
+      value: latestLog?.oxygenLevel?.toString() || "--",
+      unit: "%",
+      icon: Droplets,
+      color: "from-green-500 to-emerald-500",
+      bgColor: "bg-green-500/10",
+      borderColor: "border-green-500/30",
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-background">
       <Navbar user={user} onLogout={handleLogout} />
 
-      {/* Hero Section */}
-      <div className="relative overflow-hidden border-b border-gray-800">
-        <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-900/30 via-black to-black" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.3),rgba(255,255,255,0))]" />
-        </div>
-        
-        <div className="container relative z-10 mx-auto px-4 py-12">
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="mb-6"
+        >
+          <div className="flex flex-wrap items-center gap-3 mb-1">
+            <h1 className="text-3xl font-bold text-foreground">
+              Welcome back, {user.name}
+            </h1>
+            <Badge variant="outline" className="gap-1.5">
+              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+              Live Monitoring
+            </Badge>
+          </div>
+          <p className="text-muted-foreground">
+            Your AI-powered health companion is ready
+          </p>
+        </motion.div>
+
+        {/* Compact Vitals Row */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="mb-6"
+        >
+          {isLoading ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="h-24" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {vitals.map((vital) => {
+                const Icon = vital.icon;
+                return (
+                  <Card
+                    key={vital.label}
+                    className={`border ${vital.borderColor} ${vital.bgColor} backdrop-blur-sm hover-elevate`}
+                    data-testid={`card-vital-${vital.label.toLowerCase().replace(/\s/g, '-')}`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div
+                          className={`p-2 rounded-lg bg-gradient-to-br ${vital.color} bg-opacity-20`}
+                        >
+                          <Icon className="h-4 w-4 text-white" />
+                        </div>
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-xs text-muted-foreground font-medium">
+                          {vital.label}
+                        </p>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-2xl font-bold text-foreground">
+                            {vital.value}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {vital.unit}
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </motion.div>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          {/* AI Chat - Large Focus Area */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+            className="lg:col-span-3"
           >
-            <div className="flex items-center gap-3 mb-3">
-              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-xl">
-                {user.name.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-white">Welcome back, {user.name}</h1>
-                <p className="text-gray-400">Monitor your health and get AI-powered insights</p>
-              </div>
+            <div className="mb-3">
+              <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                  <Activity className="h-4 w-4 text-white" />
+                </div>
+                AI Doctor Chat
+              </h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Describe your symptoms for instant AI triage
+              </p>
+            </div>
+            <div className="h-[calc(100vh-400px)] min-h-[500px]">
+              <AIChat />
             </div>
           </motion.div>
-        </div>
-      </div>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content - Left Side */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Vitals Section */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-white">Your Vitals</h2>
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                  <span>Live Monitoring</span>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {isLoading ? (
-                  <>
-                    <Skeleton className="h-32 bg-gray-800" />
-                    <Skeleton className="h-32 bg-gray-800" />
-                    <Skeleton className="h-32 bg-gray-800" />
-                    <Skeleton className="h-32 bg-gray-800" />
-                  </>
-                ) : (
-                  <>
-                    <HealthMetricCard
-                      title="Heart Rate"
-                      value={latestLog?.heartRate?.toString() || "--"}
-                      unit="bpm"
-                      icon={Heart}
-                      status="normal"
-                      trend={latestLog ? "Latest reading" : "No data"}
-                    />
-                    <HealthMetricCard
-                      title="Blood Pressure"
-                      value={
-                        latestLog?.bloodPressureSystolic && latestLog?.bloodPressureDiastolic
-                          ? `${latestLog.bloodPressureSystolic}/${latestLog.bloodPressureDiastolic}`
-                          : "--"
-                      }
-                      unit="mmHg"
-                      icon={Activity}
-                      status="normal"
-                      trend={latestLog ? "Latest reading" : "No data"}
-                    />
-                    <HealthMetricCard
-                      title="Temperature"
-                      value={latestLog?.temperature?.toString() || "--"}
-                      unit="°F"
-                      icon={Thermometer}
-                      status="normal"
-                      trend={latestLog ? "Latest reading" : "No data"}
-                    />
-                    <HealthMetricCard
-                      title="Oxygen Level"
-                      value={latestLog?.oxygenLevel?.toString() || "--"}
-                      unit="%"
-                      icon={Droplets}
-                      status="normal"
-                      trend={latestLog ? "Latest reading" : "No data"}
-                    />
-                  </>
-                )}
-              </div>
-            </motion.div>
-
-            {/* Recent Activity */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-            >
-              <h2 className="text-2xl font-bold text-white mb-4">Recent Activity</h2>
-              <Card className="bg-gray-900/50 border-gray-800 backdrop-blur-sm">
-                <CardHeader className="border-b border-gray-800">
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-purple-400" />
-                    Health Log Timeline
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  {isLoading ? (
-                    <div className="space-y-3">
-                      <Skeleton className="h-8 bg-gray-800" />
-                      <Skeleton className="h-8 bg-gray-800" />
-                      <Skeleton className="h-8 bg-gray-800" />
-                    </div>
-                  ) : healthLogs && healthLogs.length > 0 ? (
-                    <div className="space-y-4">
-                      {healthLogs.slice(0, 5).map((log, index) => (
-                        <div
-                          key={log.id}
-                          className="flex items-center justify-between p-3 rounded-lg bg-gray-800/50 hover:bg-gray-800 transition-colors border border-gray-700/50"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
-                              <TrendingUp className="h-5 w-5 text-purple-400" />
-                            </div>
-                            <div>
-                              <p className="text-white font-medium">
-                                {log.symptoms || "Vitals recorded"}
-                              </p>
-                              <p className="text-sm text-gray-400">
-                                {new Date(log.timestamp).toLocaleString()}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-sm text-gray-400">
-                            #{healthLogs.length - index}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <div className="h-16 w-16 rounded-full bg-gray-800 flex items-center justify-center mx-auto mb-3">
-                        <Calendar className="h-8 w-8 text-gray-600" />
-                      </div>
-                      <p className="text-gray-400">No health logs yet</p>
-                      <p className="text-sm text-gray-500 mt-1">Start logging your vitals to see your health timeline</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-          </div>
-
-          {/* AI Chat - Right Side */}
+          {/* Recent Activity - Side Panel */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="lg:col-span-1"
+            transition={{ duration: 0.4, delay: 0.3 }}
+            className="lg:col-span-2"
           >
-            <div className="sticky top-24">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                  <Activity className="h-5 w-5 text-white" />
-                </div>
-                <h2 className="text-2xl font-bold text-white">AI Doctor</h2>
-              </div>
-              <AIChat />
+            <div className="mb-3">
+              <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-purple-500" />
+                Recent Activity
+              </h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Your health timeline
+              </p>
             </div>
+            <Card className="h-[calc(100vh-400px)] min-h-[500px] flex flex-col" data-testid="card-recent-activity">
+              <CardContent className="flex-1 overflow-auto p-4">
+                {isLoading ? (
+                  <div className="space-y-3">
+                    {[...Array(5)].map((_, i) => (
+                      <Skeleton key={i} className="h-16" />
+                    ))}
+                  </div>
+                ) : healthLogs && healthLogs.length > 0 ? (
+                  <div className="space-y-2">
+                    {healthLogs.map((log, index) => (
+                      <div
+                        key={log.id}
+                        className="group p-3 rounded-lg border hover-elevate transition-all"
+                        data-testid={`activity-log-${index}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5 h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center flex-shrink-0 border border-purple-500/20">
+                            <TrendingUp className="h-4 w-4 text-purple-500" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm text-foreground truncate">
+                              {log.symptoms || "Vitals check"}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {new Date(log.timestamp).toLocaleDateString(undefined, {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              {log.heartRate && (
+                                <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                                  <Heart className="h-2.5 w-2.5 mr-1" />
+                                  {log.heartRate}
+                                </Badge>
+                              )}
+                              {log.temperature && (
+                                <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                                  <Thermometer className="h-2.5 w-2.5 mr-1" />
+                                  {log.temperature}°
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                    <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                      <Calendar className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium text-foreground">No activity yet</p>
+                    <p className="text-xs text-muted-foreground mt-1 max-w-[200px]">
+                      Start chatting with the AI doctor to build your health timeline
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </motion.div>
         </div>
       </div>
