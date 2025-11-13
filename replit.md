@@ -21,9 +21,10 @@ Preferred communication style: Simple, everyday language.
 **UI Component System**
 - Shadcn UI (New York variant) built on Radix UI primitives for accessible, composable components
 - Tailwind CSS with custom design tokens for utility-first styling
-- Custom healthcare-focused dark theme with purple gradient backgrounds (266° 100% 50% → 280° 61% 65%)
+- Pure black dark theme (HSL: 0 0% 0%) with subtle gray surfaces and purple accent colors (266° 100% 50% → 280° 61% 65%)
 - Emergency color system: critical (red #ef4444), warning (amber), success (green), info (blue)
 - Framer Motion for smooth animations and transitions
+- Professional UI/UX with compact vitals, large AI chat focus area, and responsive grid layout
 
 **State Management Strategy**
 - React Context API (UserContext) for global authentication state
